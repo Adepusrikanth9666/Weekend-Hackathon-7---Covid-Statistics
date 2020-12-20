@@ -61,7 +61,7 @@ app.get("/totalActive", (req, res) => {
       {
         $group: {
           _id: null,
-          total: { $sum: { $substract: ["$infected", "$ recovered"] } }
+          total: { $sum: { $substract: ["$infected", "$recovered"] } }
         }
       }
     ])
@@ -71,7 +71,7 @@ app.get("/totalActive", (req, res) => {
           _id: "total",
           active: result[0].total
         }
-      };
+      }
       if (!error) {
         res.send(totalValue);
       }
@@ -136,12 +136,8 @@ app.get("/hotspotStates", (req, res) => {
                 $divide: [
                   {
                     $substract: ["$infected", "$recovered"]
-                  },
-                  "$infected"
-                ]
-              },
-              5
-            ]
+                  },"$infected"]
+              },5]
           }
         }
       },
@@ -161,22 +157,7 @@ app.get("/hotspotStates", (req, res) => {
 });
 
 app.get("/healthyStates", (req, res) => {
-  //     var total=[];
-
-  //     connection.find().then((people) => {people.filter(el=>{
-
-  //         if((((el.death)/el.infected))<0.005){
-  //             total.push({state: el.state, mortality: (((el.death)/el.infected)).toFixed(5)});
-  //             console.log((((el.death)/el.infected)));
-  //           console.log(((((el.death)/el.infected))).toFixed(5))
-  //           $round: [ "$value", 1 ]
-  //         }
-
-  //     });
-  //     // console.log(total);
-  //     res.send({data: total});
-
-  // });
+  
 
   connection.aggregate([
       {
@@ -186,9 +167,7 @@ app.get("/healthyStates", (req, res) => {
             $round: [
               {
                 $divide: ["$death", "$infected"]
-              },
-              5
-            ]
+              },5]
           }
         }
       },
@@ -200,7 +179,7 @@ app.get("/healthyStates", (req, res) => {
     ])
     .then((result, error) => {
       if (!error) {
-        res.send({ data: result });
+        res.send({ data: result});
       }
     });
 });
