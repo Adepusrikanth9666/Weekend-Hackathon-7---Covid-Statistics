@@ -1,189 +1,125 @@
-const express = require("express");
-const app = express();
+const express = require('express')
+const app = express()
 const bodyParser = require("body-parser");
-const port = 8080;
+const port = 8080
 
 // Parse JSON bodies (as sent by API clients)
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
-const { connection } = require("./connector");
+app.use(bodyParser.urlencoded({ extended: false }))
+const { connection } = require('./connector')
 
 app.get("/totalRecovered", (req, res) => {
-  connection.aggregate([
-      {
+    connection.aggregate([{
         $group: {
-          _id: null,
-          total: {
-            $sum: "$recovered"
-          }
+            _id: null,
+            total: {
+                $sum: "$recovered"
+            }
         }
-      }
-    ])
-    .then((result, error) => {
-      let totalValue = {
-        data: {
-          _id: "total",
-          recovered: result[0].total
+    }]).then((result, err) => {
+        let response = {
+            data: {
+                _id: "total",
+                recovered: result[0].total
+            }
+        };
+
+        if(!err) {
+            res.send(response);
         }
-      };
-      if (!error) {
-        res.send(totalValue);
-      }
     });
-
-  //     var total=0;
-
-  //     connection.find().then((people) => {people.map(el=>{
-
-  //         total+=(el.recovered);
-
-  //     });
-  //     console.log(total);
-  //     res.send({data: {_id: "total", recovered:total}});
-
-  // });
 });
 
-app.get("/totalActive", (req, res) => {
-  //     var total=0;
+app.get("/totalActive" , (req, res) => {
+   connection.aggregate([{
+       $group: {
+           _id: null,
+           total: {
+               $sum :{
+                   $subtract: ["$infected", "$recovered"]
+               }
+           }
+       }
+   }]).then((result, err) => {
+       let response = {
+           data: {
+               _id: "total",
+               active: result[0].total
+           }
+       }
 
-  //     connection.find().then((people) => {people.map(el=>{
-
-  //         total+=(el.infected-el.recovered);
-
-  //     });
-  //     console.log(total);
-  //     res.send({data: {_id: "total", active:total}});
-
-  // });
-
-  connection.aggregate([
-      {
-        $group: {
-          _id: null,
-          total: { $sum: { $substract: ["$infected", "$recovered"] } }
-        }
-      }
-    ])
-    .then((result, error) => {
-      let totalValue = {
-        data: {
-          _id: "total",
-          active: result[0].total
-        }
-      }
-      if (!error) {
-        res.send(totalValue);
-      }
-    });
+       if(!err) {
+           res.send(response);
+       }
+   })
 });
 
 app.get("/totalDeath", (req, res) => {
-  //     var total=0;
-
-  //     connection.find().then((people) => {people.map(el=>{
-
-  //         total+=(el.death);
-
-  //     });
-  //     console.log(total);
-  //     res.send({data: {_id: "total", death:total}});
-
-  // });
-
-  connection.aggregate([
-      {
+    connection.aggregate([{
         $group: {
-          _id: null,
-          total: {
-            $sum: "$death"
-          }
+            _id: null,
+            total: {
+                $sum: "$death"
+            }
         }
-      }
-    ])
-    .then((result, error) => {
-      let totalValue = {
-        data: { _id: "total", death: result[0].total }
-      };
-      if (!error) {
-        res.send(totalValue);
-      }
-    });
+    }]).then((result, err) => {
+        let response = {
+            data: {
+                _id: "total",
+                death: result[0].total
+            }
+        }
+
+        if(!err) {
+            res.send(response);
+        }
+    })
 });
 
-app.get("/hotspotStates", (req, res) => {
-  //     var total=[];
-
-  //     connection.find().then((people) => {people.filter(el=>{
-
-  //         if((((el.infected-el.recovered)/el.infected))>0.1){
-  //             total.push({state: el.state, rate: ((el.infected-el.recovered)/el.infected).toFixed(5)});
-  //         }
-
-  //     });
-  //     // console.log(total);
-  //     res.send({data: total});
-
-  // });
-
-  connection.aggregate([
-      {
+app.get("/hotspotStates", ((req, res) => {
+    connection.aggregate([{
         $project: {
-          state: 1,
-          rate: {
-            $round: [
-              {
-                $divide: [
-                  {
-                    $substract: ["$infected", "$recovered"]
-                  },"$infected"]
-              },5]
-          }
+            state: 1,
+            rate: {
+                $round: [
+                    {
+                    $divide: [{
+                        $subtract: ["$infected", "$recovered"]
+                    }, "$infected"]
+                },5]
+            }
         }
-      },
-      {
-        $match: {
-          rate: {
+    },{
+        $match: {rate: {
             $gt: 0.1
-          }
+            }}
+    }]).then((result, err) => {
+        if(!err) {
+            res.send({data: result});
         }
-      }
-    ])
-    .then((result, error) => {
-      if (!error) {
-        res.send({ data: result });
-      }
-    });
-});
+    })
+}));
 
 app.get("/healthyStates", (req, res) => {
-  
-
-  connection.aggregate([
-      {
+    connection.aggregate([{
         $project: {
-          state: 1,
-          mortality: {
-            $round: [
-              {
-                $divide: ["$death", "$infected"]
-              },5]
-          }
+            state: 1,
+            mortality: {
+                $round: [{
+                    $divide: ["$death", "$infected"]
+                },5]
+            }
         }
-      },
-      {
-        $match: {
-          mortality: { $lt: 0.005 }
+    }, {
+        $match: {mortality: {$lt: 0.005}}
+    }]).then((result, err) => {
+        if(!err) {
+            res.send({data: result});
         }
-      }
-    ])
-    .then((result, error) => {
-      if (!error) {
-        res.send({ data: result});
-      }
-    });
+    })
 });
 
-app.listen(port, () => console.log(`App listening on port ${port}!`));
+app.listen(port, () => console.log(`App listening on port ${port}!`))
 
 module.exports = app;
